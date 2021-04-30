@@ -1,0 +1,8 @@
+# Jupyter
+.local
+.ipython
+.ipynb_checkpoints
+
+# https://github.com/github/gitignore/blob/master/Scala.gitignore
+*.class
+*.log
