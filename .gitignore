@@ -1,8 +1,26 @@
+out/
+
 # Jupyter
 .local
 .ipython
 .ipynb_checkpoints
+.jupyter
 
-# https://github.com/github/gitignore/blob/master/Scala.gitignore
-*.class
+# docker mounting
+.bash_history
+
+# scala
 *.log
+project/
+.bsp/
+target/
+lib_managed/
+src_managed/
+project/boot/
+.idea
+*.iml
+*.swp
+.DS_Store
+/tmp
+/metastore_db/
+derby.log
