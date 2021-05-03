@@ -2,7 +2,7 @@
 
 ## requirements
 
-- [openjdk](https://openjdk.java.net/) 8
+- [openjdk](https://openjdk.java.net/)
 - [sbt](https://www.scala-sbt.org/)
 - [spark](https://spark.apache.org/)
 
