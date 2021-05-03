@@ -25,7 +25,7 @@ sbt "testOnly com.schiphol.kiara.assignment.BatchSpec"
 
 # seems to just run without writing content (data/out/stream-top10)
 sbt "runMain com.schiphol.kiara.assignment.streaming"
-# passes
+# got issues around not being able to get top 10 since streaming doesn't support sorting (or at least not in a way I can use outside of tests as well)
 sbt "testOnly com.schiphol.kiara.assignment.StreamingSpec"
 
 # seems to just run without writing content (data/out/window-top10)

@@ -9,8 +9,8 @@ import org.apache.spark.sql.streaming._
 import com.schiphol.kiara.assignment.SparkSessionWrapper
 import batch._
 
-// Use Spark structured streaming to change your job into a streaming job, and use the dataset file
-// as a source.
+// Use Spark structured streaming to change your job into a streaming job,
+// and use the dataset file as a source.
 object streaming extends SparkSessionWrapper {
   def main(args: Array[String]): Unit = {
     import spark.implicits._
@@ -21,8 +21,12 @@ object streaming extends SparkSessionWrapper {
     val df = readRoutesStream()
       .transform(cleanRoutes)
       .as[FlightRoute]
-      .transform(getTop10Stream)
-    writeRouteStream(outPath)(df)
+    val query = aggregateStream(df)
+    val fileStream = writeRouteStream(outPath)(query)
+    // sorting needs complete mode, which we can use for testing but not to write to csv
+    // print top 10 airports used as source airport
+    printStream(query.sort(col("count").desc).limit(10))
+    fileStream.awaitTermination()
   }
 
   // schema required to read the raw input data in a streaming context
@@ -48,19 +52,28 @@ object streaming extends SparkSessionWrapper {
       .schema(schema)
       .csv("./data/out/batch-routes")
 
-  // top 10 airports used as source airport
-  // using an additional watermark column as required for streaming
-  def getTop10Stream(ds: Dataset[FlightRoute]): DataFrame = {
+  // aggregate a stream of flight routes to tally source airports used.
+  // to keep this operation compatible with writing to disk,
+  // this does not yet handle getting the top 10,
+  // which is only compatible with operations supporting complete output mode.
+  def aggregateStream(ds: Dataset[FlightRoute]): DataFrame = {
     ds
+      // use an additional watermark column as required for streaming aggregations
       .withColumn("timestamp", current_timestamp())
       // our watermark should not matter much as our data is available upfront,
-      // but let's say we'll ditch items if they come in a minute late
-      .withWatermark("timestamp", "1 minutes")
+      // but let's say we'll ditch items if they come in an hour late
+      .withWatermark("timestamp", "1 hours")
       .groupBy(col("timestamp"), col("srcAirport"))
       .count()
-      // sorting needs complete mode, which we can use for testing but not to write to csv
-      // .sort(col("count").desc)
-      .limit(10)
+  }
+
+  // print from a structured stream
+  def printStream(df: DataFrame): Unit = {
+    df
+      .writeStream
+      .outputMode("complete")
+      .format("console")
+      .start()
   }
 
   // write the stream contents to a csv file
@@ -72,7 +85,6 @@ object streaming extends SparkSessionWrapper {
       .option("path", outPath)
       .option("checkpointLocation", "/tmp/checkpoints/")
       .start()
-      .awaitTermination()
   }
 
 }
