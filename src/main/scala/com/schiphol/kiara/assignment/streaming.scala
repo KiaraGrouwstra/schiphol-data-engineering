@@ -13,6 +13,7 @@ import batch._
 // and use the dataset file as a source.
 object streaming extends SparkSessionWrapper {
   def main(args: Array[String]): Unit = {
+    spark.sparkContext.setLogLevel("WARN")
     import spark.implicits._
     // delete output directory if exists
     val outPath = "./data/out/stream-top10"
@@ -48,7 +49,7 @@ object streaming extends SparkSessionWrapper {
   // so instead we use a foldered version from our batch script.
   def readRoutesStream(): DataFrame = spark
       .readStream
-      .option("header","true")
+      .option("header","false")
       .schema(schema)
       .csv("./data/out/batch-routes")
 
@@ -80,6 +81,7 @@ object streaming extends SparkSessionWrapper {
   def writeRouteStream(outPath: String)(ds: Dataset[Row]) = {
     ds
       .writeStream
+      .outputMode("append")
       .option("header",true)
       .format("csv")
       .option("path", outPath)
