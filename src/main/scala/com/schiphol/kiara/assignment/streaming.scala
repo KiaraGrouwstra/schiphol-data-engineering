@@ -23,10 +23,12 @@ object streaming extends SparkSessionWrapper {
       .transform(cleanRoutes)
       .as[FlightRoute]
     val query = aggregateStream(df)
-    writeRouteStream(outPath)(query)
+    val fileWriter = writeRouteStream(outPath)(query)
     // sorting needs complete mode, which we can use for testing but not to write to csv
     // print top 10 airports used as source airport
-    printStream(query.sort(col("count").desc).limit(10))
+    val printWriter = printStream(query.sort(col("count").desc).limit(10))
+    fileWriter.awaitTermination()
+    printWriter.awaitTermination()
   }
 
   // schema required to read the raw input data in a streaming context
@@ -69,13 +71,12 @@ object streaming extends SparkSessionWrapper {
   }
 
   // print from a structured stream
-  def printStream(df: DataFrame): Unit = {
+  def printStream(df: DataFrame) = {
     df
       .writeStream
       .outputMode("complete")
       .format("console")
       .start()
-      .awaitTermination()
   }
 
   // write the stream contents to a csv file
