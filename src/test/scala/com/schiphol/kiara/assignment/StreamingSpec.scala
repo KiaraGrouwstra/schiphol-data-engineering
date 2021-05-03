@@ -1,5 +1,7 @@
 package com.schiphol.kiara.assignment
 
+import java.io.File
+import scala.reflect.io.Directory
 import org.apache.spark.sql._
 import org.apache.spark.sql.streaming._
 import org.apache.spark.streaming._
@@ -18,7 +20,8 @@ class StreamingSpec
 
   describe(".streaming") {
 
-    it("gets the top 10 airports used as source airport") {
+    // it("gets the top 10 airports used as source airport") {
+    it("writes out a tally of source airports") {
       import spark.implicits._
 
       val top10Schema = StructType( Seq(
@@ -29,27 +32,25 @@ class StreamingSpec
       val expectedDF = spark.read
           .schema(top10Schema)
           .option("header", "true")
-          .csv("./data/test/batch-top10.csv")
+          // .csv("./data/test/batch-top10.csv")
+          .csv("./data/test/top.csv")
 
-      val reducedStream =
-            readRoutesStream()
-            .transform(cleanRoutes)
-            .as[FlightRoute]
-            .transform(getTop10Stream)
+      val df = readRoutesStream()
+        .transform(cleanRoutes)
+        .as[FlightRoute]
+      val query = aggregateStream(df)
 
-      reducedStream
-          .writeStream
-          .format("memory")
-          .queryName("StreamSpec")
-          .outputMode("complete")
-          .start()
-          .processAllAvailable()
+      // delete output directory if exists
+      val outPath = "./data/out/stream-top"
+      new Directory(new File(outPath)).deleteRecursively()
+      writeRouteStream(outPath)(query)
+      val actualDF = spark.read
+          .schema(top10Schema)
+          .option("header", "true")
+          .csv(outPath)
 
-      val actualDF = spark
-          .sql("select srcAirport, count from StreamSpec")
-
-      assert (actualDF.collect().length == 10)
-      assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true)
+      // assert (actualDF.collect().length == 10)
+      assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true, orderedComparison = false)
 
     }
 
