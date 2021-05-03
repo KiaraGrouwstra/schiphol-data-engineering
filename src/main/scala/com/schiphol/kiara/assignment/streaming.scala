@@ -23,11 +23,10 @@ object streaming extends SparkSessionWrapper {
       .transform(cleanRoutes)
       .as[FlightRoute]
     val query = aggregateStream(df)
-    val fileStream = writeRouteStream(outPath)(query)
+    writeRouteStream(outPath)(query)
     // sorting needs complete mode, which we can use for testing but not to write to csv
     // print top 10 airports used as source airport
     printStream(query.sort(col("count").desc).limit(10))
-    fileStream.awaitTermination()
   }
 
   // schema required to read the raw input data in a streaming context
@@ -51,6 +50,7 @@ object streaming extends SparkSessionWrapper {
       .readStream
       .option("header","false")
       .schema(schema)
+      .option("rowsPerSecond", 1) // use 1 row per micro batch because we do not have much data
       .csv("./data/out/batch-routes")
 
   // aggregate a stream of flight routes to tally source airports used.
@@ -62,8 +62,8 @@ object streaming extends SparkSessionWrapper {
       // use an additional watermark column as required for streaming aggregations
       .withColumn("timestamp", current_timestamp())
       // our watermark should not matter much as our data is available upfront,
-      // but let's say we'll ditch items if they come in an hour late
-      .withWatermark("timestamp", "1 hours")
+      // but let's say we'll ditch items if they come in a few seconds late
+      .withWatermark("timestamp", "2 seconds")
       .groupBy(col("timestamp"), col("srcAirport"))
       .count()
   }
@@ -75,6 +75,7 @@ object streaming extends SparkSessionWrapper {
       .outputMode("complete")
       .format("console")
       .start()
+      .awaitTermination()
   }
 
   // write the stream contents to a csv file
@@ -87,6 +88,7 @@ object streaming extends SparkSessionWrapper {
       .option("path", outPath)
       .option("checkpointLocation", "/tmp/checkpoints/")
       .start()
+      .awaitTermination()
   }
 
 }
