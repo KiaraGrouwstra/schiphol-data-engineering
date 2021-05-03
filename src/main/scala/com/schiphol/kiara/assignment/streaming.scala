@@ -88,7 +88,6 @@ object streaming extends SparkSessionWrapper {
       .option("path", outPath)
       .option("checkpointLocation", "/tmp/checkpoints/")
       .start()
-      .awaitTermination()
   }
 
 }
