@@ -15,6 +15,9 @@ docker run -p 8888:8888 -p 4040:4040 -v $PWD:/home/jovyan jupyter/all-spark-note
 # run tests
 sbt test
 
+# run tests through docker
+docker run -v $PWD:/schiphol mozilla/sbt bash -c "cd /schiphol; sbt test"
+
 # run program
 # set SPARK_HOME as per https://stackoverflow.com/questions/46613651/how-to-setup-spark-home-variable
 
