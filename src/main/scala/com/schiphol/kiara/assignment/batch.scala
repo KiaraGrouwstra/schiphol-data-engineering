@@ -11,8 +11,6 @@ object batch extends SparkSessionWrapper {
   def main(args: Array[String]): Unit = {
     import spark.implicits._
     val df = readRoutes()
-    // write to folder to use later as stream
-    df.write.mode("overwrite").option("header",false).csv("./data/out/routes")
     // clean the route data to take care of nulls and type casts
     val ds = cleanRoutes(df).as[FlightRoute]
     val top10 = getTop10(ds)

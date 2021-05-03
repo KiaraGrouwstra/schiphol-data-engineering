@@ -20,8 +20,7 @@ class StreamingSpec
 
   describe(".streaming") {
 
-    // it("gets the top 10 airports used as source airport") {
-    it("writes out a tally of source airports") {
+    it("streams a tally of source airports by number of flights") {
       import spark.implicits._
 
       val top10Schema = StructType( Seq(
@@ -32,7 +31,6 @@ class StreamingSpec
       val expectedDF = spark.read
           .schema(top10Schema)
           .option("header", "true")
-          // .csv("./data/test/batch-top10.csv")
           .csv("./data/test/top.csv")
 
       val df = readRoutesStream()
@@ -40,16 +38,17 @@ class StreamingSpec
         .as[FlightRoute]
       val query = aggregateStream(df)
 
-      // delete output directory if exists
-      val outPath = "./data/out/stream-top"
-      new Directory(new File(outPath)).deleteRecursively()
-      writeRouteStream(outPath)(query)
-      val actualDF = spark.read
-          .schema(top10Schema)
-          .option("header", "true")
-          .csv(outPath)
+      query
+          .writeStream
+          .format("memory")
+          .queryName("WindowSpec")
+          .outputMode("complete")
+          .start()
+          .processAllAvailable()
 
-      // assert (actualDF.collect().length == 10)
+      val actualDF = spark
+          .sql("select srcAirport, count from WindowSpec")
+
       assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true, orderedComparison = false)
 
     }

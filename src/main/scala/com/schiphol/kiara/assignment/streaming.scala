@@ -53,7 +53,7 @@ object streaming extends SparkSessionWrapper {
       .option("header","false")
       .schema(schema)
       .option("rowsPerSecond", 1) // use 1 row per micro batch because we do not have much data
-      .csv("./data/out/batch-routes")
+      .csv("./data/raw")
 
   // aggregate a stream of flight routes to tally source airports used.
   // to keep this operation compatible with writing to disk,
