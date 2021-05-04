@@ -25,11 +25,6 @@ class SlidingSpec
     it("gets the top 10 airports used as source airport over a pre-defined window") {
       import spark.implicits._
 
-      // val expectedDF = spark.read
-      //     .schema(tallySchema)
-      //     .option("header", true)
-      //     .csv("./data/test/window-top10.csv")
-
       val ds = readRoutesStream()
           .transform(cleanRoutes)
       val query = aggregateWindow(ds)
@@ -40,10 +35,6 @@ class SlidingSpec
       // val firstWindow = actualDF.select(col("window")).collect()(0)(0).asInstanceOf[String]//.getString(0)
       // val oneWindow = actualDF.filter(col("window") === firstWindow)
       // assert(oneWindow.count() == 10)
-
-      // writeStream("./data/test/window-top10.csv")(actualDF)
-      // actualDF.sort(col("count").desc).coalesce(1).write.mode("overwrite").option("header", true).csv("./data/test/window-top10.csv")
-      // assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true, orderedComparison = false)
 
     }
 
