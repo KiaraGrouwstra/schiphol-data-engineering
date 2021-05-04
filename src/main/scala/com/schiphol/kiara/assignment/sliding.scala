@@ -25,7 +25,7 @@ object sliding extends SparkSessionWrapper {
 
   def main(args: Array[String]): Unit = {
     // delete output directory if exists
-    val outPath = "./data/out/window"
+    val outPath = "./data/out/window-top10/"
     new Directory(new File(outPath)).deleteRecursively()
 
     // remove the checkpoint directory or else it will continue where it left off...
@@ -35,11 +35,7 @@ object sliding extends SparkSessionWrapper {
     val ds = readRoutesStream()
       .transform(cleanRoutes)
     val query = aggregateWindow(ds)
-    val fileWriter = writePartitionedStream(outPath)(query)
-    val printWriter = printStream(
-      query
-        .sort(col("count").desc)
-    )
+    val fileWriter = top10Sink(outPath)(query)
     fileWriter.awaitTermination(120000)
   }
 
@@ -62,17 +58,17 @@ object sliding extends SparkSessionWrapper {
       .count()
   }
 
-  // write the stream contents to a csv file by yyyy-mm-dd-hh partitioning
-  def writePartitionedStream(outPath: String)(ds: Dataset[Row]) = {
-    ds
-      .writeStream
-      .outputMode("append")
-      .option("header", true)
-      .format("csv")
-      .option("path", outPath)
-      .option("checkpointLocation", checkPointDirectory)
-      .partitionBy("window")
+def top10Sink(path: String)(ds: Dataset[Row]) =
+    ds.
+      writeStream
+      .outputMode("complete")
+      .foreachBatch(
+        (batchDF: DataFrame, batchId: Long) => {
+          batchDF.sort(col("count").desc).limit(10)
+            .write
+            .mode("append")
+            .parquet(path + batchId)
+        }
+      )
       .start()
-  }
-
 }

@@ -34,8 +34,6 @@ object streaming extends SparkSessionWrapper {
 
     val fileWriter = writeStream(outPath)(query)
     // sorting needs complete mode, which we can use for testing but not to write to csv
-    // print top 10 airports used as source airport
-    val printWriter = printStream(query.sort(col("count").desc).limit(10))
     fileWriter.awaitTermination(120000)
   }
 
@@ -63,16 +61,6 @@ object streaming extends SparkSessionWrapper {
       .withWatermark("timestamp", "10 seconds")
       .groupBy(col("timestamp"), col("srcAirport"))
       .count()
-  }
-
-  // print from a structured stream
-  def printStream[T](ds: Dataset[T]) = {
-    ds
-      .writeStream
-      .outputMode("complete")
-      .format("console")
-      .option("truncate", false)
-      .start()
   }
 
   // write the stream contents to a csv file
