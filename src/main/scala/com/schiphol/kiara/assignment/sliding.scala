@@ -21,10 +21,18 @@ import streaming._
 object sliding extends SparkSessionWrapper {
   import spark.implicits._
 
+  val checkPointDirectory = "data/checkpoint"
+
   def main(args: Array[String]): Unit = {
     // delete output directory if exists
     val outPath = "./data/out/window"
+
+
     new Directory(new File(outPath)).deleteRecursively()
+
+    // remove the checkpoint directory or else it will continue where it left of...
+    // TODO: remove it for going into production
+    new Directory(new File(checkPointDirectory)).deleteRecursively()
 
     val ds = readRoutesStream()
       .transform(cleanRoutes)
@@ -34,8 +42,8 @@ object sliding extends SparkSessionWrapper {
       query
         .sort(col("count").desc)
     )
-    fileWriter.awaitTermination()
-    printWriter.awaitTermination()
+    fileWriter.awaitTermination(120000)
+//    printWriter.awaitTermination()
   }
 
   // aggregate a stream of flight routes to tally source airports used.
@@ -50,7 +58,7 @@ object sliding extends SparkSessionWrapper {
       .toDF()
       // use randomized timestamps over a range to make distinct values we can slide a window over
       .withColumn("timestamp", (current_timestamp().cast(IntegerType) + round(rand() * 60, 0).cast(IntegerType)).cast(TimestampType))
-      .withWatermark("timestamp", "2 seconds")
+      .withWatermark("timestamp", "10 seconds")
       // .withColumn("year", year(col("timestamp")))
       // .withColumn("month", format_string("%02d", month(col("timestamp"))))
       // .withColumn("day",   format_string("%02d", dayofmonth(col("timestamp"))))
@@ -72,8 +80,7 @@ object sliding extends SparkSessionWrapper {
       .option("header", true)
       .format("csv")
       .option("path", outPath)
-      .option("checkpointLocation", "/tmp/checkpoints/")
-      // .partitionBy("year", "month", "day", "hour")
+      .option("checkpointLocation", checkPointDirectory)
       .partitionBy("window")
       .start()
   }

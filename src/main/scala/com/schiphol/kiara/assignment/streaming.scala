@@ -1,19 +1,17 @@
 package com.schiphol.kiara.assignment
 
-import java.io.File
-import scala.reflect.io.Directory
+import com.schiphol.kiara.assignment.batch._
+import com.schiphol.kiara.assignment.shared._
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.streaming._
-import org.apache.spark.sql.catalyst.ScalaReflection
-import com.schiphol.kiara.assignment.SparkSessionWrapper
-import shared._
-import batch._
+
+import java.io.File
+import scala.reflect.io.Directory
 
 // Use Spark structured streaming to change your job into a streaming job,
 // and use the dataset file as a source.
 object streaming extends SparkSessionWrapper {
+
   import spark.implicits._
 
   def main(args: Array[String]): Unit = {
@@ -23,7 +21,11 @@ object streaming extends SparkSessionWrapper {
 
     val ds = readRoutesStream()
       .transform(cleanRoutes)
+
+    println("Is this acutally a stream?: " + ds.isStreaming)
+
     val query = aggregateStream(ds)
+
     val fileWriter = writeStream(outPath)(query)
     // sorting needs complete mode, which we can use for testing but not to write to csv
     // print top 10 airports used as source airport
@@ -34,12 +36,13 @@ object streaming extends SparkSessionWrapper {
 
   // read stream
   def readRoutesStream(): Dataset[FlightRouteRaw] = spark
-      .readStream
-      .option("header","false")
-      .schema(rawSchema)
-      .option("rowsPerSecond", 100) // use few rows per micro batch as we do not have much data
-      .csv("./data/raw")
-      .as[FlightRouteRaw]
+    .readStream
+    .option("header", "false")
+    .schema(rawSchema)
+    .option("maxFilesPerTrigger", 1) // Treat a sequence of files as a stream by picking one file at a time
+    .option("rowsPerSecond", 100) // use few rows per micro batch as we do not have much data
+    .csv("data/raw")
+    .as[FlightRouteRaw]
 
   // aggregate a stream of flight routes to tally source airports used.
   // to keep this operation compatible with writing to disk,
@@ -75,7 +78,7 @@ object streaming extends SparkSessionWrapper {
       .option("header", true)
       .format("csv")
       .option("path", outPath)
-      .option("checkpointLocation", "/tmp/checkpoints/")
+      .option("checkpointLocation", "data/checkpoint")
       .start()
   }
 

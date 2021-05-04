@@ -7,11 +7,11 @@ trait SparkSessionWrapper extends Serializable {
   lazy val spark: SparkSession = {
     val session = SparkSession
       .builder()
-      .master("local")
+      .master("local[2]")
       .appName("spark session")
       .config("spark.sql.streaming.forceDeleteTempCheckpointLocation", true)
       .getOrCreate()
-    session.sparkContext.setLogLevel("WARN")
+    session.sparkContext.setLogLevel("ERROR")
     session
   }
 
