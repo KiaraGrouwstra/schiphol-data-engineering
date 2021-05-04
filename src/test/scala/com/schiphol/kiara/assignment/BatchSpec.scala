@@ -3,7 +3,8 @@ package com.schiphol.kiara.assignment
 import org.scalatest.FunSpec
 import com.github.mrpowers.spark.fast.tests.DataFrameComparer
 import org.apache.spark.sql.types._
-import com.schiphol.kiara.assignment.batch._
+import batch._
+import shared._
 
 class BatchSpec
     extends FunSpec
@@ -16,8 +17,8 @@ class BatchSpec
 
     it("gets the top 10 airports used as source airport") {
       import spark.implicits._
-      val df = readRoutes()
-      val ds = cleanRoutes(df).as[FlightRoute]
+      val ds = readRoutes()
+          .transform(cleanRoutes)
       val actualDF = ds.transform(getTop10)
       val schema = actualDF.schema
       val expectedDF = spark.read

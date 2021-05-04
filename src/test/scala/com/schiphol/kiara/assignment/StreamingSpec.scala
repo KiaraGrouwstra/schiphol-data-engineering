@@ -3,13 +3,16 @@ package com.schiphol.kiara.assignment
 import java.io.File
 import scala.reflect.io.Directory
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming._
 import org.apache.spark.streaming._
 import org.scalatest.FunSpec
 import com.github.mrpowers.spark.fast.tests.DataFrameComparer
 import org.apache.spark.sql.types._
-import com.schiphol.kiara.assignment.batch._
-import com.schiphol.kiara.assignment.streaming._
+import batch._
+import streaming._
+import shared._
+import testUtils._
 
 class StreamingSpec
     extends FunSpec
@@ -23,31 +26,19 @@ class StreamingSpec
     it("streams a tally of source airports by number of flights") {
       import spark.implicits._
 
-      val top10Schema = StructType( Seq(
-          StructField("srcAirport", StringType, false),
-          StructField("count", LongType, false),
-      ))
-
       val expectedDF = spark.read
-          .schema(top10Schema)
+          .schema(tallySchema)
           .option("header", "true")
           .csv("./data/test/top.csv")
 
       val df = readRoutesStream()
         .transform(cleanRoutes)
-        .as[FlightRoute]
       val query = aggregateStream(df)
 
-      query
-          .writeStream
-          .format("memory")
-          .queryName("WindowSpec")
-          .outputMode("complete")
-          .start()
-          .processAllAvailable()
-
-      val actualDF = spark
-          .sql("select srcAirport, count from WindowSpec")
+      val actualDF = awaitQuery(query, "streaming")
+      //.select("srcAirport", "count")
+      // .sort(col("count").desc)
+      // .limit(10)
 
       assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true, orderedComparison = false)
 
