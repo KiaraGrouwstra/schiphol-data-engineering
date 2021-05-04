@@ -38,6 +38,7 @@ object streaming extends SparkSessionWrapper {
       .option("header","false")
       .schema(rawSchema)
       .option("rowsPerSecond", 100) // use few rows per micro batch as we do not have much data
+      .option("maxFilesPerTrigger", 1) // Treat a sequence of files as a stream by picking one file at a time
       .csv("./data/raw")
       .as[FlightRouteRaw]
 
