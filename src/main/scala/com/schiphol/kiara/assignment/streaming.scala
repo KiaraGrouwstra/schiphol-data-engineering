@@ -21,7 +21,7 @@ object streaming extends SparkSessionWrapper {
     val outPath = "./data/out/stream"
     new Directory(new File(outPath)).deleteRecursively()
 
-    // remove the checkpoint directory or else it will continue where it left of...
+    // remove the checkpoint directory or else it will continue where it left off...
     // TODO: remove it for going into production
     new Directory(new File(checkPointDirectory)).deleteRecursively()
 
@@ -57,11 +57,9 @@ object streaming extends SparkSessionWrapper {
     ds
       .toDF()
       // use an additional watermark column as required for streaming aggregations
-      // .withColumn("timestamp", current_timestamp())
+      .withColumn("timestamp", (current_timestamp().cast(IntegerType) + round(rand() * 60, 0).cast(IntegerType)).cast(TimestampType))
       // our watermark should not matter much as our data is available upfront,
       // but let's say we'll ditch items if they come in a few seconds late
-      // .withWatermark("timestamp", "2 seconds")
-      .withColumn("timestamp", (current_timestamp().cast(IntegerType) + round(rand() * 60, 0).cast(IntegerType)).cast(TimestampType))
       .withWatermark("timestamp", "10 seconds")
       .groupBy(col("timestamp"), col("srcAirport"))
       .count()
