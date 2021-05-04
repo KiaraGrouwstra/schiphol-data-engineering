@@ -29,16 +29,16 @@ class StreamingSpec
       val expectedDF = spark.read
           .schema(tallySchema)
           .option("header", "true")
-          .csv("./data/test/top.csv")
+          .csv("./data/test/batch-top10.csv")
 
       val df = readRoutesStream()
         .transform(cleanRoutes)
       val query = aggregateStream(df)
 
       val actualDF = awaitQuery(query, "streaming")
-      //.select("srcAirport", "count")
-      // .sort(col("count").desc)
-      // .limit(10)
+          .select("srcAirport", "count")
+          .sort(col("count").desc)
+          .limit(10)
 
       assertSmallDataFrameEquality(actualDF, expectedDF, ignoreNullable = true, orderedComparison = false)
 
